@@ -1,19 +1,8 @@
-/* ESP HTTP Client Example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
 
 
 #include <stdio.h>
-#include "esp_wifi.h"
 #include "esp_system.h"
-#include "nvs_flash.h"
 #include "esp_event.h"
-#include "protocol_examples_common.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -36,25 +25,6 @@ static void shutdown_signaler(TimerHandle_t xTimer)
     ESP_LOGI(TAG, "No data received for %d seconds, signaling shutdown", NO_DATA_TIMEOUT_SEC);
     xSemaphoreGive(shutdown_sema);
 }
-
-#if CONFIG_WEBSOCKET_URI_FROM_STDIN
-static void get_string(char *line, size_t size)
-{
-    int count = 0;
-    while (count < size) {
-        int c = fgetc(stdin);
-        if (c == '\n') {
-            line[count] = '\0';
-            break;
-        } else if (c > 0 && c < 127) {
-            line[count] = c;
-            ++count;
-        }
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
-}
-
-#endif /* CONFIG_WEBSOCKET_URI_FROM_STDIN */
 
 static void websocket_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
@@ -92,19 +62,8 @@ static void websocket_app_start(void)
                                          pdFALSE, NULL, shutdown_signaler);
     shutdown_sema = xSemaphoreCreateBinary();
 
-#if CONFIG_WEBSOCKET_URI_FROM_STDIN
-    char line[128];
+    websocket_cfg.uri = "ws://192.168.64.50:4455";
 
-    ESP_LOGI(TAG, "Please enter uri of websocket endpoint");
-    get_string(line, sizeof(line));
-
-    websocket_cfg.uri = line;
-    ESP_LOGI(TAG, "Endpoint uri: %s\n", line);
-
-#else
-    websocket_cfg.uri = CONFIG_WEBSOCKET_URI;
-
-#endif /* CONFIG_WEBSOCKET_URI_FROM_STDIN */
 
     ESP_LOGI(TAG, "Connecting to %s...", websocket_cfg.uri);
 
@@ -130,25 +89,10 @@ static void websocket_app_start(void)
     esp_websocket_client_destroy(client);
 }
 
-void app_main(void)
+
+void start_websocket(void)
 {
-    ESP_LOGI(TAG, "[APP] Startup..");
-    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
-    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
-    esp_log_level_set("*", ESP_LOG_INFO);
-    esp_log_level_set("WEBSOCKET_CLIENT", ESP_LOG_DEBUG);
-    esp_log_level_set("TRANSPORT_WS", ESP_LOG_DEBUG);
-    esp_log_level_set("TRANS_TCP", ESP_LOG_DEBUG);
-
-    ESP_ERROR_CHECK(nvs_flash_init());
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    ESP_ERROR_CHECK(example_connect());
+    
 
     websocket_app_start();
 }
